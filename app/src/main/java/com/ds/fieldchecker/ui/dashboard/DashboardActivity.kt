@@ -1,5 +1,6 @@
 package com.ds.fieldchecker.ui.dashboard
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.location.Location
@@ -68,16 +69,29 @@ class DashboardActivity : BaseActivity(), DashboardView, View.OnClickListener,
     }
 
     override fun onCoordinateClicked(coordinatesItem: CoordinatesItem) {
-        currentLocation=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        if (MapsUtils.isNear(currentLocation,coordinatesItem.taskLocation)|| coordinatesItem.status!!){
-            var bundle=Bundle()
-            bundle.putParcelable("coordinatesItem",coordinatesItem)
-            bundle.putDouble("currentLat", currentLocation?.latitude!!)
-            bundle.putDouble("currentLon", currentLocation?.longitude!!)
-            startActivity(Intent(this,UploadActivity::class.java).putExtras(bundle))
-        }else{
-            showError("Goto exact location")
-        }
+        if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0L, 0F, object :LocationListener{
+                override fun onLocationChanged(p0: Location) {
+                    if (p0!=null){
+                        currentLocation=p0
+                        locationManager.removeUpdates(this)
+                    }
+                }
+            })
+            if (MapsUtils.isNear(
+                    currentLocation,
+                    coordinatesItem.taskLocation
+                ) || coordinatesItem.status!!
+            ) {
+                var bundle = Bundle()
+                bundle.putParcelable("coordinatesItem", coordinatesItem)
+                bundle.putDouble("currentLat", currentLocation?.latitude!!)
+                bundle.putDouble("currentLon", currentLocation?.longitude!!)
+                startActivity(Intent(this, UploadActivity::class.java).putExtras(bundle))
+            } else {
+                showError("Goto exact location")
+            }
+        }else showError("Enable location")
     }
 
     override fun onLocationClicked(coordinatesItem: CoordinatesItem) {
